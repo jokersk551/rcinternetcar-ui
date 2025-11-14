@@ -7,7 +7,7 @@
 <style>
   body{
     margin:0; background:#000; color:#fff; font-family:Arial;
-    user-select:none; touch-action:none;   /* MULTI-TOUCH IMPORTANT */
+    user-select:none; touch-action:none;
   }
 
   .wrap{
@@ -25,8 +25,23 @@
     border:3px solid #fff; background:#111;
     color:#fff; font-size:28px; border-radius:12px;
     display:flex; align-items:center; justify-content:center;
+    transition:0.1s;
   }
   .btn:active{ background:#fff; color:#000; }
+
+  /* When ESP offline, disable buttons */
+  .disabled {
+    opacity:0.35;
+    pointer-events:none;
+  }
+
+  #status {
+    position:fixed;
+    bottom:10px;
+    left:10px;
+    font-size:14px;
+    color:#0f0;
+  }
 </style>
 </head>
 
@@ -44,12 +59,16 @@
   </div>
 </div>
 
+<div id="status">Checking ESP...</div>
+
 <!-- Firebase v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-// Your Firebase config
+// --------------------------------------
+//   FIREBASE CONFIG
+// --------------------------------------
 firebase.initializeApp({
   apiKey: "AIzaSyBHrnh8l6BFX-zQeB3XhkOYnTflY-s5pPw",
   authDomain: "rcinternetcar.firebaseapp.com",
@@ -63,9 +82,16 @@ firebase.initializeApp({
 var db = firebase.database();
 var S = { up:0, down:0, left:0, right:0 };
 
+// --------------------------------------
+// MULTI-TOUCH SAFE BUTTON HANDLER
+// --------------------------------------
 function updateDB(){
   db.ref('car').update({
-    up:S.up, down:S.down, left:S.left, right:S.right, ts:Date.now()
+    up:S.up,
+    down:S.down,
+    left:S.left,
+    right:S.right,
+    ts:Date.now()
   });
 }
 
@@ -96,8 +122,48 @@ bind("DOWN","down");
 bind("LEFT","left");
 bind("RIGHT","right");
 
+// Prevent text select
 document.addEventListener("contextmenu", e=>e.preventDefault());
+
+// --------------------------------------
+// ESP ONLINE CHECK (heartbeat)
+// --------------------------------------
+let statusEl = document.getElementById("status");
+let lastOnline = 0;
+
+function setButtons(enable){
+  let ids = ["UP", "DOWN", "LEFT", "RIGHT"];
+  ids.forEach(id=>{
+    let el = document.getElementById(id);
+    if(enable) el.classList.remove("disabled");
+    else el.classList.add("disabled");
+  });
+}
+
+function checkESP(){
+  db.ref("esp/online").once("value").then(snap=>{
+    const ts = snap.val();
+    if(!ts){
+      statusEl.innerHTML = "ESP: OFFLINE";
+      setButtons(false);
+      return;
+    }
+
+    const diff = Date.now() - ts;
+
+    if(diff < 3000){
+      statusEl.innerHTML = "ESP: ONLINE";
+      setButtons(true);
+    } else {
+      statusEl.innerHTML = "ESP: OFFLINE";
+      setButtons(false);
+    }
+  });
+}
+
+setInterval(checkESP, 1000);
+checkESP();
+
 </script>
 </body>
 </html>
-
