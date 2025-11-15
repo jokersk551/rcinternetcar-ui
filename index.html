@@ -3,22 +3,36 @@
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta charset="utf-8">
+<title>RC Internet Car</title>
 
 <style>
-  body{
-    margin:0; background:#000; color:#fff; font-family:Arial;
-    user-select:none; touch-action:none;
-  }
-  .wrap{ height:100vh; display:flex; justify-content:space-around; align-items:center; }
-  .col{ display:flex; flex-direction:column; gap:40px; align-items:center; }
-  .btn{
-    width:160px; height:120px;
-    border:3px solid #fff; background:#111;
-    color:#fff; font-size:28px; border-radius:12px;
-    display:flex; justify-content:center; align-items:center;
-  }
-  .btn:active{ background:#fff; color:#000; }
-  #espStatus{ position:fixed; bottom:15px; left:15px; color:#0f0; font-size:18px; }
+body{
+  margin:0; background:#000; color:#fff; font-family:Arial;
+  user-select:none; touch-action:none;
+}
+
+.wrap{
+  height:100vh; display:flex;
+  justify-content:space-around; align-items:center;
+}
+
+.col{
+  display:flex; flex-direction:column;
+  gap:40px; align-items:center;
+}
+
+.btn{
+  width:160px; height:120px;
+  border:3px solid #fff; background:#111;
+  color:#fff; font-size:28px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+}
+.btn:active{ background:#fff; color:#000; }
+
+#online{
+  position:fixed; bottom:10px; left:10px;
+  font-size:18px;
+}
 </style>
 </head>
 
@@ -36,8 +50,9 @@
   </div>
 </div>
 
-<div id="espStatus">ESP: OFFLINE</div>
+<div id="online">ESP: OFFLINE</div>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -52,20 +67,17 @@ firebase.initializeApp({
   appId: "1:759617467760:web:51bbd27f63a410ba708bb5"
 });
 
-let db = firebase.database();
-let S = { up:0, down:0, left:0, right:0 };
+var db = firebase.database();
+var S = { up:0, down:0, left:0, right:0 };
 
 function updateDB(){
-  db.ref("car").update({
-    up:S.up,
-    down:S.down,
-    left:S.left,
-    right:S.right,
-    ts:Date.now()
+  db.ref('car').update({
+    up:S.up, down:S.down, left:S.left, right:S.right,
+    ts: Date.now()
   });
 }
 
-// BUTTON BINDING
+// bind multi-touch buttons
 function bind(id, key){
   let el = document.getElementById(id);
 
@@ -93,31 +105,23 @@ bind("DOWN","down");
 bind("LEFT","left");
 bind("RIGHT","right");
 
-// =========================
-//   ESP ONLINE DETECTOR
-// =========================
-let espStatus = document.getElementById("espStatus");
+// ONLINE CHECK
+let onlineEl = document.getElementById("online");
 
-db.ref("esp/online").on("value", snap => {
-  const last = snap.val();
-  const now = Date.now();
-
-  if(!last){ 
-    espStatus.textContent = "ESP: OFFLINE";
-    espStatus.style.color = "red";
-    return;
-  }
-
-  if(now - last < 3000){
-    espStatus.textContent = "ESP: ONLINE";
-    espStatus.style.color = "#0f0";
+db.ref("esp/online").on("value", snap=>{
+  let v = snap.val() || 0;
+  if(Date.now() - v < 5000){
+    onlineEl.innerText = "ESP: ONLINE";
+    onlineEl.style.color = "#00ff00";
   } else {
-    espStatus.textContent = "ESP: OFFLINE";
-    espStatus.style.color = "red";
+    onlineEl.innerText = "ESP: OFFLINE";
+    onlineEl.style.color = "red";
   }
 });
 
+// disable long-press menu
 document.addEventListener("contextmenu", e=>e.preventDefault());
 </script>
+
 </body>
 </html>
