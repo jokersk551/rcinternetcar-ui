@@ -12,33 +12,7 @@ body{
   user-select:none; touch-action:none;
 }
 
-/* ------ PIN SCREEN ------ */
-#pinScreen{
-  position:fixed; top:0; left:0; width:100%; height:100%;
-  background:#000;
-  display:flex; flex-direction:column;
-  align-items:center; justify-content:center;
-  gap:20px;
-}
-
-#pinBox{
-  width:200px; padding:10px;
-  font-size:22px; text-align:center;
-  border-radius:8px; border:2px solid #fff;
-  background:#111; color:#fff;
-}
-
-#pinBtn{
-  width:120px; height:50px; font-size:20px;
-  background:#fff; color:#000;
-  border:none; border-radius:8px;
-}
-
-#error{
-  color:red; font-size:18px; margin-top:5px;
-}
-
-/* ------ MAIN UI ------ */
+/* MAIN UI */
 .wrap{
   height:100vh; display:flex;
   justify-content:space-around; align-items:center;
@@ -70,18 +44,8 @@ body{
 
 <body>
 
-<!-- ============================ PIN ============================= -->
-
-<div id="pinScreen">
-  <h2>Enter PIN</h2>
-  <input id="pinBox" type="password" maxlength="6" placeholder="PIN">
-  <button id="pinBtn">UNLOCK</button>
-  <div id="error"></div>
-</div>
-
-<!-- ========================== MAIN UI ========================== -->
-
-<div class="wrap" id="mainUI" style="display:none;">
+<!-- MAIN UI -->
+<div class="wrap" id="mainUI">
   <div class="col">
     <div id="UP" class="btn">UP</div>
     <div id="DOWN" class="btn">DOWN</div>
@@ -112,49 +76,7 @@ firebase.initializeApp({
 
 var db = firebase.database();
 
-/* ======================================================
-            PIN SYSTEM (SUPER FAST ZERO DELAY)
-====================================================== */
-
-let pinScreen = document.getElementById("pinScreen");
-let mainUI = document.getElementById("mainUI");
-let pinInput = document.getElementById("pinBox");
-let pinBtn = document.getElementById("pinBtn");
-let errorBox = document.getElementById("error");
-
-let realPIN = null;
-
-// lock inputs until PIN loads
-pinInput.disabled = true;
-pinBtn.disabled = true;
-errorBox.innerText = "Loading PIN...";
-
-// fetch PIN once
-db.ref("auth/pin").once("value").then(snap=>{
-    realPIN = String(snap.val());
-    pinInput.disabled = false;
-    pinBtn.disabled = false;
-    errorBox.innerText = "";
-});
-
-// verify PIN
-pinBtn.addEventListener("click", ()=>{
-    if(realPIN === null){
-        errorBox.innerText = "PIN not loaded...";
-        return;
-    }
-
-    if(pinInput.value === realPIN){
-        pinScreen.style.display = "none";
-        mainUI.style.display = "flex";
-    } else {
-        errorBox.innerText = "Wrong PIN!";
-    }
-});
-
-/* ======================================================
-                    CAR CONTROL SYSTEM
-====================================================== */
+/* CAR CONTROL SYSTEM */
 
 var S = { up:0, down:0, left:0, right:0 };
 
@@ -206,9 +128,7 @@ bind("DOWN","down");
 bind("LEFT","left");
 bind("RIGHT","right");
 
-/* ======================================================
-                    ESP ONLINE CHECK
-====================================================== */
+/* ESP ONLINE CHECK */
 
 let onlineEl = document.getElementById("online");
 
@@ -224,13 +144,12 @@ db.ref("esp/online").on("value", snap=>{
     onlineEl.style.color = "red";
     setButtonsEnabled(false);
 
-    // auto stop car
+    // auto stop
     S = { up:0, down:0, left:0, right:0 };
     updateDB();
   }
 });
 
-// disable long press menu
 document.addEventListener("contextmenu", e=>e.preventDefault());
 </script>
 
