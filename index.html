@@ -26,8 +26,17 @@ body{
   border:3px solid #fff; background:#111;
   color:#fff; font-size:28px; border-radius:12px;
   display:flex; align-items:center; justify-content:center;
+  opacity:1; transition:0.3s;
 }
-.btn:active{ background:#fff; color:#000; }
+
+.btn.disabled{
+  opacity:0.3;
+  pointer-events:none;
+}
+
+.btn:active{
+  background:#fff; color:#000;
+}
 
 #online{
   position:fixed; bottom:10px; left:10px;
@@ -70,6 +79,24 @@ firebase.initializeApp({
 var db = firebase.database();
 var S = { up:0, down:0, left:0, right:0 };
 
+// BUTTON ENABLE/DISABLE
+let buttons = [
+  document.getElementById("UP"),
+  document.getElementById("DOWN"),
+  document.getElementById("LEFT"),
+  document.getElementById("RIGHT")
+];
+
+function setButtonsEnabled(state){
+  buttons.forEach(btn=>{
+    if(state){
+      btn.classList.remove("disabled");
+    } else {
+      btn.classList.add("disabled");
+    }
+  });
+}
+
 function updateDB(){
   db.ref('car').update({
     up:S.up, down:S.down, left:S.left, right:S.right,
@@ -77,7 +104,7 @@ function updateDB(){
   });
 }
 
-// bind multi-touch buttons
+// multi-touch
 function bind(id, key){
   let el = document.getElementById(id);
 
@@ -105,17 +132,29 @@ bind("DOWN","down");
 bind("LEFT","left");
 bind("RIGHT","right");
 
-// ONLINE CHECK
 let onlineEl = document.getElementById("online");
 
+// ESP ONLINE CHECK
 db.ref("esp/online").on("value", snap=>{
   let v = snap.val() || 0;
-  if(Date.now() - v < 5000){
+
+  if(Date.now() - v < 4000){
     onlineEl.innerText = "ESP: ONLINE";
     onlineEl.style.color = "#00ff00";
+
+    // enable buttons
+    setButtonsEnabled(true);
+
   } else {
     onlineEl.innerText = "ESP: OFFLINE";
     onlineEl.style.color = "red";
+
+    // disable buttons instantly
+    setButtonsEnabled(false);
+
+    // make sure DB also stops sending movement
+    S = { up:0, down:0, left:0, right:0 };
+    updateDB();
   }
 });
 
