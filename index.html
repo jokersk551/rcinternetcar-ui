@@ -29,18 +29,14 @@
   }
   .btn:active{ background:#fff; color:#000; }
 
-  /* When ESP offline, disable buttons */
-  .disabled {
-    opacity:0.35;
+  .disabled{
+    opacity:0.4;
     pointer-events:none;
   }
 
-  #status {
-    position:fixed;
-    bottom:10px;
-    left:10px;
-    font-size:14px;
-    color:#0f0;
+  #status{
+    position:fixed; bottom:10px; left:10px;
+    font-size:15px;
   }
 </style>
 </head>
@@ -61,14 +57,13 @@
 
 <div id="status">Checking ESP...</div>
 
-<!-- Firebase v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-// --------------------------------------
-//   FIREBASE CONFIG
-// --------------------------------------
+// ----------------------------------
+// Firebase Config
+// ----------------------------------
 firebase.initializeApp({
   apiKey: "AIzaSyBHrnh8l6BFX-zQeB3XhkOYnTflY-s5pPw",
   authDomain: "rcinternetcar.firebaseapp.com",
@@ -80,13 +75,14 @@ firebase.initializeApp({
 });
 
 var db = firebase.database();
+
 var S = { up:0, down:0, left:0, right:0 };
 
-// --------------------------------------
-// MULTI-TOUCH SAFE BUTTON HANDLER
-// --------------------------------------
+// ----------------------------------
+// Update Firebase
+// ----------------------------------
 function updateDB(){
-  db.ref('car').update({
+  db.ref("car").update({
     up:S.up,
     down:S.down,
     left:S.left,
@@ -95,6 +91,9 @@ function updateDB(){
   });
 }
 
+// ----------------------------------
+// Multi-touch button binding
+// ----------------------------------
 function bind(id, key){
   let el = document.getElementById(id);
 
@@ -122,18 +121,13 @@ bind("DOWN","down");
 bind("LEFT","left");
 bind("RIGHT","right");
 
-// Prevent text select
 document.addEventListener("contextmenu", e=>e.preventDefault());
 
-// --------------------------------------
+// ----------------------------------
 // ESP ONLINE CHECK (heartbeat)
-// --------------------------------------
-let statusEl = document.getElementById("status");
-let lastOnline = 0;
-
+// ----------------------------------
 function setButtons(enable){
-  let ids = ["UP", "DOWN", "LEFT", "RIGHT"];
-  ids.forEach(id=>{
+  ["UP","DOWN","LEFT","RIGHT"].forEach(id=>{
     let el = document.getElementById(id);
     if(enable) el.classList.remove("disabled");
     else el.classList.add("disabled");
@@ -142,22 +136,23 @@ function setButtons(enable){
 
 function checkESP(){
   db.ref("esp/online").once("value").then(snap=>{
-    const ts = snap.val();
+    let ts = Number(snap.val());
     if(!ts){
-      statusEl.innerHTML = "ESP: OFFLINE";
       setButtons(false);
+      status.textContent = "ESP: OFFLINE";
       return;
     }
 
-    const diff = Date.now() - ts;
+    let now = Math.floor(Date.now()/1000);
 
-    if(diff < 3000){
-      statusEl.innerHTML = "ESP: ONLINE";
+    if(now - ts < 4){
+      status.textContent = "ESP: ONLINE";
       setButtons(true);
     } else {
-      statusEl.innerHTML = "ESP: OFFLINE";
+      status.textContent = "ESP: OFFLINE";
       setButtons(false);
     }
+
   });
 }
 
