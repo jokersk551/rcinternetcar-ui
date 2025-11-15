@@ -11,6 +11,33 @@ body{
   user-select:none; touch-action:none;
 }
 
+/* PIN SCREEN */
+#pinScreen{
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  background:#000;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:20px;
+}
+
+#pinBox{
+  width:200px; padding:10px;
+  font-size:22px; text-align:center;
+  border-radius:8px; border:2px solid #fff;
+  background:#111; color:#fff;
+}
+
+#pinBtn{
+  width:120px; height:50px; font-size:20px;
+  background:#fff; color:#000;
+  border:none; border-radius:8px;
+}
+
+#error{
+  color:red; font-size:18px; margin-top:5px;
+}
+
+/* MAIN UI */
 .wrap{
   height:100vh; display:flex;
   justify-content:space-around; align-items:center;
@@ -28,15 +55,7 @@ body{
   display:flex; align-items:center; justify-content:center;
   opacity:1; transition:0.3s;
 }
-
-.btn.disabled{
-  opacity:0.3;
-  pointer-events:none;
-}
-
-.btn:active{
-  background:#fff; color:#000;
-}
+.btn.disabled{ opacity:0.3; pointer-events:none; }
 
 #online{
   position:fixed; bottom:10px; left:10px;
@@ -47,7 +66,17 @@ body{
 
 <body>
 
-<div class="wrap">
+<!-- PIN SCREEN -->
+<div id="pinScreen">
+  <h2>Enter PIN</h2>
+  <input id="pinBox" type="password" maxlength="6" placeholder="PIN">
+  <button id="pinBtn">UNLOCK</button>
+  <div id="error"></div>
+</div>
+
+<!-- /PIN SCREEN -->
+
+<div class="wrap" id="mainUI" style="display:none;">
   <div class="col">
     <div id="UP" class="btn">UP</div>
     <div id="DOWN" class="btn">DOWN</div>
@@ -77,9 +106,46 @@ firebase.initializeApp({
 });
 
 var db = firebase.database();
+
+/* ================================
+   PIN LOCK SYSTEM
+================================ */
+let pinScreen = document.getElementById("pinScreen");
+let mainUI = document.getElementById("mainUI");
+let pinInput = document.getElementById("pinBox");
+let pinBtn = document.getElementById("pinBtn");
+let errorBox = document.getElementById("error");
+
+let realPIN = null;
+
+// Fetch PIN from Firebase
+db.ref("auth/pin").once("value", snap=>{
+  realPIN = snap.val();
+});
+
+// Check PIN
+pinBtn.addEventListener("click", ()=>{
+  if(pinInput.value === realPIN){
+    pinScreen.style.display = "none";
+    mainUI.style.display = "flex";
+  } else {
+    errorBox.innerText = "Wrong PIN!";
+  }
+});
+
+/* ================================
+   RC CONTROL SYSTEM
+================================ */
+
 var S = { up:0, down:0, left:0, right:0 };
 
-// BUTTON ENABLE/DISABLE
+function updateDB(){
+  db.ref('car').update({
+    up:S.up, down:S.down, left:S.left, right:S.right,
+    ts: Date.now()
+  });
+}
+
 let buttons = [
   document.getElementById("UP"),
   document.getElementById("DOWN"),
@@ -89,22 +155,11 @@ let buttons = [
 
 function setButtonsEnabled(state){
   buttons.forEach(btn=>{
-    if(state){
-      btn.classList.remove("disabled");
-    } else {
-      btn.classList.add("disabled");
-    }
+    if(state) btn.classList.remove("disabled");
+    else btn.classList.add("disabled");
   });
 }
 
-function updateDB(){
-  db.ref('car').update({
-    up:S.up, down:S.down, left:S.left, right:S.right,
-    ts: Date.now()
-  });
-}
-
-// multi-touch
 function bind(id, key){
   let el = document.getElementById(id);
 
@@ -132,33 +187,26 @@ bind("DOWN","down");
 bind("LEFT","left");
 bind("RIGHT","right");
 
+/* ONLINE CHECK */
 let onlineEl = document.getElementById("online");
 
-// ESP ONLINE CHECK
 db.ref("esp/online").on("value", snap=>{
   let v = snap.val() || 0;
 
   if(Date.now() - v < 4000){
     onlineEl.innerText = "ESP: ONLINE";
     onlineEl.style.color = "#00ff00";
-
-    // enable buttons
     setButtonsEnabled(true);
-
   } else {
     onlineEl.innerText = "ESP: OFFLINE";
     onlineEl.style.color = "red";
-
-    // disable buttons instantly
     setButtonsEnabled(false);
 
-    // make sure DB also stops sending movement
     S = { up:0, down:0, left:0, right:0 };
     updateDB();
   }
 });
 
-// disable long-press menu
 document.addEventListener("contextmenu", e=>e.preventDefault());
 </script>
 
